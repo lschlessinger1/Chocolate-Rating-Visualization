@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+        <!-- Bootstrap CSS -->
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+
+        <title>Chocolate Ratings</title>
+
+        <script src="https://d3js.org/d3.v4.js"></script>
+        <script src="https://d3js.org/d3-color.v1.min.js"></script>
+        <script src="https://d3js.org/d3-interpolate.v1.min.js"></script>
+        <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+        <script src="node_modules/d3-tip/dist/index.js"></script>
+        <style>
+            #canvas svg {
+                display: block;
+                margin: 0 auto;
+            }
+
+            .d3-tip {
+              line-height: 1;
+              padding: 12px;
+              background: rgba(0, 0, 0, 0.8);
+              color: #fff;
+              border-radius: 2px;
+            }
+
+            /* Creates a small triangle extender for the tooltip */
+            .d3-tip:after {
+              box-sizing: border-box;
+              display: inline;
+              font-size: 10px;
+              width: 100%;
+              line-height: 1;
+              color: rgba(0, 0, 0, 0.8);
+              content: "\25BC";
+              position: absolute;
+              text-align: center;
+            }
+
+            /* Style northward tooltips differently */
+            .d3-tip.n:after {
+              margin: -1px 0 0 0;
+              top: 100%;
+              left: 0;
+            }
+
+            .bar:hover {
+                stroke-width: 1px;
+                stroke: black;
+            }
+
+            #rating-system {
+                margin-top: 100px;
+            }
+
+            #main-content {
+                margin-top: 50px;
+            }
+        </style>
+    </head>
+    <body>
+        <main class="container">
+        	<h1 class="text-center">Best Artisanal Chocolate Bars</h1>
+            <p>
+            Chocolate has become one of the most popular food types and flavors in the world. The chocolate industry is a steadily growing, $50 billion-a-year worldwide business and is prevalent throughout most of the world. In 2013, the U.S. alone spent $20.1 billion on chocolate. However, not all bars are created equal. This visualization uses data from Flavors of Cacao, which contains over 1,700 expert ratings of artisanal bars of chocolate and other relevant information.
+            </p>
+            <section id="main-content">
+                <section id="canvas">
+                        
+                </section>
+
+                <div id="rating-system">
+                    <h6>Flavors of Cacao Rating System:</h6>
+                    <p class="small">These ratings were compiled by Brady Brelinski, Founding Member of the Manhattan Chocolate Society. For up-to-date information, as well as additional content (including interviews with craft chocolate makers), please see the website: <a href="http://flavorsofcacao.com">Flavors of Cacao</a>.
+                    </p>
+                    <p class="small">
+                        <br><br>
+                        5 = <span class="font-italic">Elite</span> (Transcending beyond the ordinary limits)<br>
+                        4 = <span class="font-italic">Premium</span> (Superior flavor development, character and style)<br>
+                        3 = <span class="font-italic">Satisfactory</span>(3.0) to praiseworthy(3.75) (well made with special qualities)<br>
+                        2 = <span class="font-italic">Disappointing</span> (Passable but contains at least one significant flaw)<br>
+                        1 = <span class="font-italic">Unpleasant</span> (mostly unpalatable)
+                        <br><br>
+                        Each chocolate is evaluated from a combination of both objective qualities and subjective interpretation. A rating here only represents an experience with one bar from one batch.
+                        <br><br>
+                        The database is narrowly focused on plain dark chocolate with an aim of appreciating the flavors of the cacao when made into chocolate. The ratings do not reflect health benefits, social missions, or organic status.
+                        <br><br>
+                        <span class="font-weight-bold">Flavor</span>&nbsp; is the most important component of the Flavors of Cacao ratings. Diversity, balance, intensity and purity of flavors are all considered. It is possible for a straight forward single note chocolate to rate as high as a complex flavor profile that changes throughout. Genetics, terroir, post harvest techniques, processing and storage can all be discussed when considering the flavor component. 
+                        <br><br>
+                        <span class="font-weight-bold">Texture</span>&nbsp; has a great impact on the overall experience and it is also possible for texture related issues to impact flavor. It is a good way to evaluate the makers vision, attention to detail and level of proficiency.
+                        <br><br>
+                        <span class="font-weight-bold">Aftermelt</span>&nbsp; is the experience after the chocolate has melted. Higher quality chocolate will linger and be long lasting and enjoyable. Since the aftermelt is the last impression you get from the chocolate, it receives equal importance in the overall rating.
+                        <br><br>
+                        <span class="font-weight-bold">Overall Opinion</span>&nbsp; is really where the ratings reflect a subjective opinion. Ideally it is my evaluation of whether or not the components above worked together and an opinion on the flavor development, character and style. It is also here where each chocolate can usually be summarized by the most prominent impressions that you would remember about each chocolate.
+                    </p>
+                </div>
+            </section>
+        </main>
+        <script type="text/javascript">
+            var dataFolder = "";
+            var cacaoFileName = "flavors_of_cacao.csv";
+
+            // Columns:
+                // Company: 
+                    // Name of the company manufacturing the bar.
+                // Specific_Bean_Origin_Or_Bar_Name: 
+                    // The specific geo-region of origin for the bar.
+                // REF: 
+                    // A value linked to when the review was entered in the database. Higher = more recent.
+                // Review_Date: 
+                    // Date of publication of the review.
+                // Cocoa_Percent: 
+                    // Cocoa percentage (darkness) of the chocolate bar being reviewed.
+                // Company_Location: 
+                    // Manufacturer base country.
+                // Rating: 
+                    // Expert rating for the bar.
+                // Bean_Type: 
+                    // The variety (breed) of bean used, if provided.
+                // Broad_Bean_Origin: 
+                    // The broad geo-region of origin for the bean.
+
+            // define svg variables
+            var margin = { 
+            	top: 20,
+            	right: 20,
+            	bottom: 70, 
+                left: 40
+            };
+
+            var width  = 960 - margin.left - margin.right;
+            var height = 500 - margin.top - margin.bottom;
+            
+            // define scales
+            var barXScale = d3.scaleLinear()
+                .range([0, width]);
+            var barYScale = d3.scaleLinear()
+                .range([height, 0])
+                .domain([0, 5]);
+
+            var tip = d3.tip()
+              .attr('class', 'd3-tip')
+              .offset([-10, 0])
+              .html(function(d) {
+                return "<p><span class='font-weight-bold'>" + d.company + "</span> (" + d.companyLoc + ") <br> Mean Rating: <span class='text-primary'>" 
+                + d.meanRating.toFixed(2)+"</span></p>";
+              })
+            // var tip = d3.tip().attr('class', 'd3-tip').html(function(d) { return d; });
+
+            // define canvas SVG
+            var canvas = d3.select("body #canvas")
+                .append("svg")
+                .attr("width",  width  + margin.left + margin.right)
+                .attr("height", height + margin.top  + margin.bottom)
+                .append("g")
+                .attr("transform",  "translate(" + margin.left + "," + margin.top + ")");
+
+            canvas.call(tip);
+
+            var secondarySortProp = "meanRating"; // for now choose from {cocoaPercent, meanRating}
+            var colorGrouping = "companyLoc"; // for now 
+
+            createBarChart();
+
+            // helper functions
+            function createBarChart() {
+                canvas.html("");
+                d3.csv(dataFolder + cacaoFileName, function(dataset) {
+                    // first augment dataset by chunking into {company: mean rating} objects
+                    var uniqueCompanies = createUniqueCompanies(dataset);
+                    
+                    // add company to object and convert to array
+                    var companyData = createCompanyDataArr(uniqueCompanies);
+
+                    // sort by company, then something else (in this case mean rating)
+                    
+                    companyData = sortCompanyData(companyData, secondarySortProp);
+
+                    // coloring scheme
+                    // color by company location
+
+                    // count unique company locations
+                    
+                    var uniqueGroupDict = {};
+                    var i = 0;
+                    companyData.forEach((element) => {
+                        var group = element[colorGrouping];
+                        if (uniqueGroupDict.hasOwnProperty(group)) {
+                            uniqueGroupDict[group] = {
+                                sum: uniqueGroupDict[group].sum + 1, 
+                                endIdx: i
+                            };
+                        } else {
+                            uniqueGroupDict[group] = {
+                                sum: 1, 
+                                endIdx: i
+                            };
+                        }
+                        i++;
+                    });
+
+                    var uniqueGroups =  Object.keys(uniqueGroupDict)
+                    var numUniqueGroups = uniqueGroups.length;
+
+                    var colorScales = generateColorScales(numUniqueGroups);
+
+                    // create map from company location name to [0...numUniqueCompanyLocs]
+                    var groupDict = {};
+                    var availableIndices = d3.range(colorScales.length);
+                    for (var i = 0; i < numUniqueGroups; i++) {
+                        var r = Math.floor(Math.random() * availableIndices.length);
+                        var idx = availableIndices[r];
+                        groupDict[uniqueGroups[i]] = {
+                            index: i, 
+                            scaleIdx: idx
+                        };
+                    }
+
+                    // addBars
+                    addBars(companyData, groupDict, colorScales, colorGrouping);
+
+                    // TODO extract function: 
+                    // add country labels
+                    var countryXScale = d3.scaleLinear()
+                        .domain([0, numUniqueGroups])
+                        .range([0, width]);
+
+                    var startIdx = 0;
+                    Object.entries(uniqueGroupDict).forEach(([location, val]) => {
+                        var numOccurences = val.sum;
+                        var endIdx = val.endIdx;
+                        var middleIdx = (startIdx + endIdx) / 2;
+                        var minCountryRating = 5;
+                        for (var i = startIdx; i < endIdx; i++) {
+                            minCountryRating = Math.min(minCountryRating, companyData[i].meanRating);
+                        }
+
+                        if (numOccurences > 40) {
+                            // add horizontal label
+
+                            // need to map country index to 0...n
+                            canvas.append("text")
+                                .attr("x", barXScale(middleIdx))
+                                .attr("y", height - barYScale(5 - minCountryRating/2))
+                                .style("stroke", "black")
+                                .attr("shape-rendering", "crispEdges")
+                                .attr("font-family", "sans-serif")
+                                .attr("font-size", "3em")
+                                .style("opacity", "0.9")
+                                .attr("alignment-baseline", "middle")
+                                .attr("text-anchor", "middle")
+                                .text(location);
+                        } else if (numOccurences > 5) {
+                            // add vertical label
+                            canvas.append("text")
+                                .attr("transform", "rotate(-90)")
+                                .attr("x", -(height - barYScale(5 - minCountryRating/2)))
+                                .attr("y", barXScale(middleIdx))
+                                .style("stroke", "black")
+                                .style("opacity", "0.9")
+                                .attr("shape-rendering", "crispEdges")
+                                .attr("font-family", "sans-serif")
+                                .attr("font-size", "0.75em")
+                                .attr("alignment-baseline", "middle")
+                                .attr("text-anchor", "middle")
+                                .text(location);
+                        }
+                        startIdx = endIdx + 1;
+                    });
+
+                    var barPad = 1;
+                    var n = companyData.length;
+                    var barWidth = width / n - barPad;
+                    //  Create Axes
+                    var xAxis = d3.axisBottom(barXScale)
+                      .ticks(0);
+                    var yAxis = d3.axisLeft(barYScale)
+                      .ticks(5);
+                    
+                    var xPadding = 0;
+                    canvas.append("g")
+                        .attr("class", "axis")
+                        .attr("transform", "translate(0," + (height) + ")")
+                        .call(xAxis);
+                    canvas.append("text")
+                        .attr("class", "axis-text")             
+                        .attr("x", width/2)
+                        .attr("y", height)
+                        .attr("dy", "2em")
+                        .attr("text-anchor", "middle")
+                        .text("Artisanal Chocolate Companies");
+
+                    canvas.append("g")
+                        .attr("class", "axis")
+                        .call(yAxis);
+                    canvas.append("text")
+                        .attr("class", "axis-text")             
+                        .attr("transform", "rotate(-90)")
+                        .attr("y", 6)
+                        .attr("x", -height / 2)
+                        .attr("text-anchor", "middle")
+                        .attr("dy", "-2em")
+                        .text("Mean Rating");
+                });
+            }
+
+            function createUniqueCompanies(dataset) {
+                var uniqueCompanies = {};
+                dataset.forEach(function(element) {
+                    var company = element.Company;
+                    var rating = parseFloat(element.Rating);
+                    var companyLocation = element.Company_Location;
+                    var pctCocoa = element.Cocoa_Percent;
+                    var broadBeanOrigin = element.Broad_Bean_Origin;
+                    var beanType = element.Bean_Type
+                    var barName = element.Specific_Bean_Origin_Or_Bar_Name;
+                    var reviewDate = element.Review_Date;
+                    var beanType = element.Bean_Type;
+                    // Company  Specific_Bean_Origin_Or_Bar_Name    REF Review_Date Cocoa_Percent   Company_Location    Rating  Bean_Type   Broad_Bean_Origin
+
+                    if (uniqueCompanies.hasOwnProperty(company)) {
+                        var prevNumBars = uniqueCompanies[company].numBars;
+                        var prevTotalRating = uniqueCompanies[company].totalRating;
+                        var newNumBars = prevNumBars + 1;
+                        var newTotalRating = prevTotalRating + rating;
+                        uniqueCompanies[company].numBars = newNumBars;
+                        uniqueCompanies[company].totalRating = newTotalRating;
+                        uniqueCompanies[company].meanRating = newTotalRating / newNumBars;
+                    } else {
+                        uniqueCompanies[company] = { 
+                            numBars: 1,
+                            totalRating: rating,
+                            meanRating: rating,
+                            companyLoc: companyLocation,
+                        };
+                    }
+                });
+                return uniqueCompanies;
+            }
+
+            function createCompanyDataArr(uniqueCompanies) {
+                var companyData = [];
+                Object.entries(uniqueCompanies).forEach(([key, value]) => {
+                    value.company = key;
+                    companyData.push(value);
+                });
+                return companyData;
+            }
+
+            function sortCompanyData(companyData, secondarySortProp) {
+                return companyData.sort(function(c1, c2) { 
+                    var locA = c1.companyLoc;
+                    var locB = c2.companyLoc;
+                    if (locA.localeCompare(locB) == 1) {
+                        return 1;
+                    }  else if (locA.localeCompare(locB) == -1) {
+                        return -1;
+                    } else {
+                        var propA = c1[secondarySortProp];
+                        var propB = c2[secondarySortProp];
+                        if (propA > propB) {
+                            return -1;
+                        } else if (propA < propB) {
+                            return 1;
+                        } else {
+                            return 0;
+                        }
+                    }
+                });
+            }
+
+            // inspired by: https://stackoverflow.com/questions/20847161/how-can-i-generate-as-many-colors-as-i-want-using-d3
+            function generateColorScales(numUniqueGroups) {
+                var colorDomain = [0, numUniqueGroups - 1];
+                var colorInterpoolator = d3.interpolateHcl;
+                var colorScales = [ 
+                    d3.scaleLinear()
+                        .domain(colorDomain)
+                        .interpolate(colorInterpoolator) 
+                        .range(["#a6cee3", "#fdbf6f"]),
+                    d3.scaleLinear()
+                        .domain(colorDomain)
+                        .interpolate(colorInterpoolator) 
+                        .range(["#1f78b4","#ff7f00"]),
+                    d3.scaleLinear()
+                        .domain(colorDomain)
+                        .interpolate(colorInterpoolator) 
+                        .range(["#b2df8a","#cab2d6"]),
+                    d3.scaleLinear()
+                        .domain(colorDomain)
+                        .interpolate(colorInterpoolator) 
+                        .range(["#33a02c","#6a3d9a"]),
+                    d3.scaleLinear()
+                        .domain(colorDomain)
+                        .interpolate(colorInterpoolator) 
+                        .range(["#fb9a99","#ffff99"]),
+                    d3.scaleLinear()
+                        .domain(colorDomain)
+                        .interpolate(colorInterpoolator) 
+                        .range(["#e31a1c","#b15928"])
+                ];
+                return colorScales
+            }
+
+            function addBars(companyData, groupDict, colorScales, colorGrouping) {
+                var n = companyData.length;
+                var maxRating = 5;
+                // set domain of axes
+                barXScale.domain([0, n]);
+                var barWidth = width / n;
+                var barPad = 1;
+                canvas.selectAll("rect")
+                    .data(companyData)
+                    .enter()
+                    .append("rect")
+                    .attr("class", "bar")  
+                    .attr("id", function (d, i) {
+                        return "bar-id-" + d.company.split(" ").join("-");
+                    })
+                    .attr("x", function(d, i) {
+                        return barXScale(i);
+                    })
+                    .attr("y", function(d) {
+                        return height - barYScale(maxRating - d.meanRating);
+                    })
+                    .attr("width", barWidth - barPad)
+                    .attr("height", function(d) {
+                        return barYScale(maxRating - d.meanRating);
+                    })
+                    .attr("fill", function(d, i) {
+                        var companyDict = groupDict[d[colorGrouping]];
+                        var colorVal = companyDict.index;
+                        var colorScale = colorScales[companyDict.scaleIdx];
+                        return colorScale(colorVal);
+                    })
+                    .on("mouseover", tip.show)
+                    .on("mouseout", tip.hide);
+            }
+		</script>
+
+        <!-- Optional JavaScript -->
+        <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+        <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
+    </body>
+</html>
