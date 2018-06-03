@@ -422,6 +422,12 @@ function addBars(companyData, groupDict, colorScales, colorGrouping) {
                     .paddingOuter(0.01);
             }
 
+            // get hue of bars by original country color
+            var companyDict = groupDict[d[colorGrouping]];
+            var colorVal = companyDict.index;
+            var colorScale = colorScales[companyDict.scaleIdx];
+            var hue = colorScale(colorVal);
+
             // add axis labels
             xIndividualAxis = d3.axisBottom(barIndividualXScale);            
 
@@ -468,6 +474,8 @@ function addBars(companyData, groupDict, colorScales, colorGrouping) {
                 .transition()
                 .remove()
                 .delay(removePrevRectsDelay);
+            
+            
 
             // add chocolate bars for the company
             var individBars = canvas.selectAll("rect.individual")
@@ -480,10 +488,9 @@ function addBars(companyData, groupDict, colorScales, colorGrouping) {
                     return barId;
                 })
                 .attr("fill", function(datum, i) {
-                    var companyDict = groupDict[d[colorGrouping]];
-                    var colorVal = companyDict.index;
-                    var colorScale = colorScales[companyDict.scaleIdx];
-                    return colorScale(colorVal);
+                    // fill color shade by percent cacao
+                    var pctCocoa = parseInt(datum.pctCocoa) / 100.0;
+                    return getBarColor(hue, pctCocoa);
                 });
 
             // place all bars on top of expanded original first
@@ -659,4 +666,18 @@ function wrap(text, width) {
       }
     }
   });
+}
+
+function getBarColor(hue, pctCocoa) {
+    var modePctCocoa = 70.0 / 100.0;
+    var stepSize = 10;
+    var shadeAdjustment = Math.abs(modePctCocoa * stepSize - pctCocoa * stepSize);
+    var color = d3.rgb(hue);
+    if (pctCocoa < modePctCocoa) {
+        color = color.brighter(shadeAdjustment);
+    } else if (pctCocoa > modePctCocoa) {
+        color = color.darker(shadeAdjustment);
+    }   
+
+    return color;
 }
