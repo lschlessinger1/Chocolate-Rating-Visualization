@@ -65,11 +65,8 @@ var indivTip = d3.tip()
     .html(function(d) {
         var beanOrigin = d.broadBeanOrigin.trim();
         var beanType = d.beanType.trim();
-        
-        // var hasBeanType = beanType == "";
-        // console.log(typeof(beanType) + " " + hasBeanType);
         var beanTypeLine = beanType ? "<br> Bean Type: " + beanType : "";
-        var beanOriginLine = beanType ? "<br> Bean Origin: " + beanOrigin : "";
+        var beanOriginLine = beanOrigin ? "<br> Bean Origin: " + beanOrigin : "";
         return "<p><span class='font-weight-bold'>" + d.name + "</span> (" + d.pctCocoa + ") <br> Rating: <span class='text-primary font-weight-bold'>" +
             d.rating.toFixed(2) + "</span>" + beanTypeLine + beanOriginLine +"</p>";
     });
@@ -280,7 +277,6 @@ function createCompanyDataArr(uniqueCompanies) {
 }
 
 function sortCompanyData(companyData, secondarySortProp) {
-
     return companyData.sort(function(c1, c2) {
         var locA = c1.companyLoc;
         var locB = c2.companyLoc;
@@ -369,7 +365,7 @@ function addBars(companyData, groupDict, colorScales, colorGrouping) {
         .on("mouseout", tip.hide)
         .on("click", function(d, i) {
             var bars = d.bars;
-
+            console.log(bars);
             // set scale for new plot
             var numBars = bars.length;
 
@@ -403,10 +399,15 @@ function addBars(companyData, groupDict, colorScales, colorGrouping) {
             canvas.select("#y-axis-text")
                 .text("Rating");
 
+            // sort bars by rating
+            bars = bars.sort(function(a, b){ 
+                return b.rating - a.rating; 
+            });
+
             // set bar domain
             barIndividualXScale.domain(bars.map(bar => bar.name));
 
-            // reset padding for few bars
+            // reset padding for few # of bars
             if (numBars < 5) {
                 barIndividualXScale
                     .paddingOuter(0.9)
@@ -419,16 +420,23 @@ function addBars(companyData, groupDict, colorScales, colorGrouping) {
             }
 
             // add axis labels
-            xIndividualAxis = d3.axisBottom(barIndividualXScale);
+            xIndividualAxis = d3.axisBottom(barIndividualXScale);            
 
-            canvas.append("g")
+            var axisLabels = canvas.append("g")
                 .attr("class", "x-axis-individual")
                 .attr("transform", "translate(0, " + height + ")")
                 .call(xIndividualAxis)
                 .selectAll(".tick text")  
                 .style("font-size", "9px")
-                .style("font-family", "sans-serif")
+                .style("font-family", "sans-serif")             
                 .call(wrap, barIndividualXScale.bandwidth());
+
+            // if more than 25 bars, rotate the axis labels
+            var rotateThresh = 25;
+            if (bars.length > rotateThresh) {
+                axisLabels.attr("transform", "rotate(-45)")
+                    .style("text-anchor", "end")
+            }
 
             // add title to plot
             canvas.append("text")
@@ -447,7 +455,7 @@ function addBars(companyData, groupDict, colorScales, colorGrouping) {
             var expandSelectedBarDuration = 100;
             selectedBar
                 .transition()
-                .attr("width", barIndividualXScale.bandwidth() / 2)
+                .attr("width", barIndividualXScale.bandwidth())
                 .delay(hideUnselectedBarsDuration)
                 .duration(hideUnselectedBarsDuration + expandSelectedBarDuration);
 
@@ -460,7 +468,7 @@ function addBars(companyData, groupDict, colorScales, colorGrouping) {
 
             // add chocolate bars for the company
             var individBars = canvas.selectAll("rect.individual")
-                .data(bars)
+                .data(bars, function(d) { return d.rating; })
                 .enter()
                 .append("rect")
                 .attr("class", "bar individual")
@@ -480,14 +488,12 @@ function addBars(companyData, groupDict, colorScales, colorGrouping) {
                 .transition()
                 .attr("x", selectedBar.attr("x"))
                 .attr("y", selectedBar.attr("y"))
-                .attr("width",  barIndividualXScale.bandwidth() / 2)
+                .attr("width",  barIndividualXScale.bandwidth())
                 .attr("height", selectedBar.attr("height"))
                 .delay(removePrevRectsDelay);
 
             individBars
                 .transition()
-                
-                // .duration(300)
                 .attr("x", function(d, i) {
                     return barIndividualXScale(d.name);
                 })
@@ -499,6 +505,7 @@ function addBars(companyData, groupDict, colorScales, colorGrouping) {
                     return barYScale(maxRating - d.rating);
                 })
                 .delay(function (d,i){ return removePrevRectsDelay + i * 100;});
+
             individBars  
                 .on("mouseover", indivTip.show)
                 .on("mouseout", indivTip.hide);
@@ -535,8 +542,6 @@ function addBars(companyData, groupDict, colorScales, colorGrouping) {
                 .attr("alignment-baseline","middle")
                 .attr("text-anchor", "middle")
                 .html("&#8249; Back");
-
-            console.log(bars);
         });
 }
 
