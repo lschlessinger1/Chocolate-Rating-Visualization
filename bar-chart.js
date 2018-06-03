@@ -364,8 +364,11 @@ function addBars(companyData, groupDict, colorScales, colorGrouping) {
         .on("mouseover", tip.show)
         .on("mouseout", tip.hide)
         .on("click", function(d, i) {
+            // disable double clicking
+            d3.select(this).on("click", null);
+
             var bars = d.bars;
-            console.log(bars);
+
             // set scale for new plot
             var numBars = bars.length;
 
